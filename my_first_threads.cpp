@@ -6,13 +6,14 @@
 
 #include <iostream>
 #include <thread>
-using namespace std;
+#include <assert.h>
 
 void eggs(int x) {
 	printf("Eggs function started\n");
 	for (int i = 0; i < x; ++i) {
 		printf("Cooking eggs #%d\n", i);
 	}
+	printf("Finished cooking eggs, about to exit function\n");
 }
 
 void ham(int x) {
@@ -20,6 +21,7 @@ void ham(int x) {
 	for (int i = 0; i < x; ++i) {
 		printf("Cooking ham #%d\n", i);
 	}
+	printf("Finished cooking ham, about to exit function\n");
 }
 
 class bacon {
@@ -29,6 +31,7 @@ public:
 		for (int i = 0; i < x; ++i) {
 			printf("Cooking bacon #%d\n", i);
 		}
+	printf("Finished cooking bacon, about to exit functor\n");
 	}
 };
 
@@ -40,18 +43,24 @@ int main(int argc, char *argv[]) {
 	}
 	int num = atoi(argv[1]);
 
-	// thread instances are created with a function pointer and its arguments
-	// thread starts running immediately after instantiation
-	// after running, thread is joinable; must be joined or detached before going out of scope
-	thread t1(eggs, num);
+	printf("Started main function, starting threads\n");
 
-	thread t2(ham, num);
+	// Thread instances are created with a function pointer and its arguments
+	// Thread starts running immediately after instantiation
+	// If thread is constructed with a callable, it is joinable;
+	// must be joined or detached before going out of scope
+	// Default constructed threads are not joinable
+	std::thread t1(eggs, num);
+
+	std::thread t2(ham, num);
 
 	// Threads can be created with a functor
-	thread t3(bacon(), num);
+	std::thread t3(bacon(), num);
 
-	// To make program wait until a thread to finish, use thread::join()
+	// To make program wait until a thread to finish, use std::thread::join()
 	// thread will throw an exception if join is not used to ensure the thread has stopped executing
+	// Once join is called, thread is no longer joinable
+	// To run threads concurrently, construct them first, and then join them
 	t1.join();
 	t2.join();
 	t3.join();
@@ -61,14 +70,21 @@ int main(int argc, char *argv[]) {
 	auto clean_up = [](int x) {
 		printf("Clean up lambda function started\n");
 		for (int i = 0; i < x; ++i) {
-			printf("Washing dishes #%d\n", i);
+			printf("Cleaning up kitchen #%d\n", i);
 		}
-		printf("Finished cleaning up, about to exit labmda function\n");
+		printf("Finished cleaning up, about to exit lambda function\n");
 	};
 
-	thread t4(clean_up, num);
-	t4.detach();
+	std::thread t4(clean_up, num);
+
+	// Ownership of a thread can be changed with std::move(thread t)
+	std::thread t5(std::move(t4)); //t5 takes over thread, t5 is joinable now, t4 is no longer joinable
+	assert(t5.joinable());
+
+	t5.join();
 	
+
+	// All child threads must be non joinable by the time the parent thread terminates or else error thrown
 	printf("About to exit main function\n");
 	return 0;
 }	

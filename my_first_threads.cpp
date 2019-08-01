@@ -7,6 +7,7 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
+#include <atomic>
 #include <assert.h>
 
 std::mutex mu;
@@ -16,9 +17,10 @@ void eggs(int x, int* count) {
 	printf("Eggs function started\n");
 	for (int i = 0; i < x; ++i) {
 		// lock_guard acquires the mutex and allows for safe data access
-		// when lock_guard goes out of scope, mutex is released
-		// in this example, all three food-making functions are cooking at the same time
-		// to ensure food_count is accurate, lock_guard is needed
+		// When lock_guard goes out of scope, mutex is released
+		// In this example, all three food-making functions are cooking at the same time
+		// To ensure food_count is accurate, lock_guard is needed
+		// Multiple threads competing for a shared resource (write) may result in undefined behavior
 		std::lock_guard<std::mutex> lock(mu);
 		printf("Cooking eggs #%d\n", i);
 		++(*count);
@@ -57,7 +59,8 @@ int main(int argc, char *argv[]) {
 	}
 	int num = atoi(argv[1]);
 
-
+	// use std::atomic for primitive data types if it will be shared between threads
+	// mutexes are much slower for primitives
 	int num_food = 0;
 
 	printf("Started main function, starting threads\n");
